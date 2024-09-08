@@ -2,39 +2,36 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'abhibindel/test:latest'
-        DOCKER_REPO = 'abhibindel/test'
-        SSH_CREDENTIALS_ID = 'docker_ssh' // Jenkins SSH credentials ID
-        DOCKER_SERVER_IP = '3.111.38.104' // Docker server IP
-        SSH_PORT = 22 // Default SSH port, update if different
+        // Docker configuration
+        DOCKER_IMAGE_NAME = 'abhibindel/test'
+        DOCKER_IMAGE_TAG = 'latest'
+        DOCKERFILE_PATH = '/root/devops-assignment/dockerfile'
+        SSH_CREDENTIALS_ID = 'docker_ssh'
+        DOCKER_SERVER_IP = '3.111.38.104'
+        SSH_PORT = 22
+
+        // Kubernetes configuration
+        DEPLOYMENT_NAME = 'nft-bridge-app'
+        KUBE_CONFIG_PATH = '/root/k8s-devops-assignment-kubeconfig.yaml'
     }
 
     stages {
-        stage('Connect to Docker Server and Build Docker Image') {
+        stage('Setup SSH Connection and Execute Commands') {
             steps {
                 script {
                     sshagent([SSH_CREDENTIALS_ID]) {
-                        // Build Docker image on the Docker server
+                        // Execute all commands in a single SSH session
                         sh """
-                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} '
-                            cd /root/devops-assignment &&
-                            docker build -t ${DOCKER_IMAGE} .
-                        '
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Push Docker Image to Docker Hub') {
-            steps {
-                script {
-                    sshagent([SSH_CREDENTIALS_ID]) {
-                        // Push Docker image to Docker Hub
-                        sh """
-                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} '
-                            docker push ${DOCKER_IMAGE}
-                        '
+                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} << 'EOF'
+                            # Build Docker image
+                            docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} -f ${DOCKERFILE_PATH} .
+                            
+                            # Push Docker image to Docker Hub
+                            docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                            
+                            # Restart Kubernetes deployment
+                            kubectl --kubeconfig=${KUBE_CONFIG_PATH} rollout restart deployment/${DEPLOYMENT_NAME}
+                        EOF
                         """
                     }
                 }
