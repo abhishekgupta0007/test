@@ -16,45 +16,24 @@ pipeline {
     }
 
     stages {
-        stage('Build Docker Image') {
+        stage('Setup SSH Connection and Execute Commands') {
             steps {
                 script {
                     sshagent([SSH_CREDENTIALS_ID]) {
-                        // SSH into Docker server and build Docker image
                         sh """
-                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} '
+                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} << 'EOF'
+                            # Change to the directory containing the Dockerfile
+                            cd /root/devops-assignment
+                            
+                            # Build Docker image
                             docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} -f ${DOCKERFILE_PATH} .
-                        '
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                script {
-                    sshagent([SSH_CREDENTIALS_ID]) {
-                        // SSH into Docker server and push Docker image to Docker Hub
-                        sh """
-                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} '
+                            
+                            # Push Docker image to Docker Hub
                             docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
-                        '
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Restart Kubernetes Deployment') {
-            steps {
-                script {
-                    sshagent([SSH_CREDENTIALS_ID]) {
-                        // SSH into Docker server and restart the Kubernetes deployment
-                        sh """
-                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} '
+                            
+                            # Restart Kubernetes deployment
                             kubectl --kubeconfig=${KUBE_CONFIG_PATH} rollout restart deployment/${DEPLOYMENT_NAME}
-                        '
+                        EOF
                         """
                     }
                 }
@@ -69,5 +48,3 @@ pipeline {
         }
     }
 }
-
-
