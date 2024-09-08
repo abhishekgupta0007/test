@@ -1,38 +1,52 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_IMAGE = 'abhibindel/test:latest'
+        DOCKER_REPO = 'abhibindel/test'
+        SSH_CREDENTIALS_ID = 'docker_ssh' // Jenkins SSH credentials ID
+        DOCKER_SERVER_IP = '3.111.38.104' // Docker server IP
+        SSH_PORT = 22 // Default SSH port, update if different
+    }
+
     stages {
-        stage('Checkout') {
+        stage('Connect to Docker Server and Build Docker Image') {
             steps {
-                // Checkout the repository
-                git url: 'https://github.com/ashlesh-settlemint/devops-assignment.git'
+                script {
+                    sshagent([SSH_CREDENTIALS_ID]) {
+                        // Build Docker image on the Docker server
+                        sh """
+                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} '
+                            cd /root/devops-assignment &&
+                            docker build -t ${DOCKER_IMAGE} .
+                        '
+                        """
+                    }
+                }
             }
         }
-        stage('Build') {
+
+        stage('Push Docker Image to Docker Hub') {
             steps {
-                echo 'Building...'
-                // Add your build steps here, e.g., build commands
-            }
-        }
-        stage('Test') {
-            steps {
-                echo 'Testing...'
-                // Add your test steps here, e.g., run tests
-            }
-        }
-        stage('Deploy') {
-            steps {
-                echo 'Deploying...'
-                // Add your deploy steps here, e.g., deployment commands
+                script {
+                    sshagent([SSH_CREDENTIALS_ID]) {
+                        // Push Docker image to Docker Hub
+                        sh """
+                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} '
+                            docker push ${DOCKER_IMAGE}
+                        '
+                        """
+                    }
+                }
             }
         }
     }
+
     post {
-        success {
-            echo 'Pipeline succeeded!'
-        }
-        failure {
-            echo 'Pipeline failed.'
+        always {
+            // Clean up or notifications
+            echo 'Pipeline completed'
         }
     }
 }
+
