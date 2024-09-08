@@ -21,7 +21,7 @@ pipeline {
                 script {
                     sshagent([SSH_CREDENTIALS_ID]) {
                         sh """
-                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} << 'EOF'
+                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} << EOF
                             # Change to the directory containing the Dockerfile
                             cd /root/devops-assignment
                             
@@ -48,3 +48,4 @@ pipeline {
         }
     }
 }
+
