@@ -5,7 +5,7 @@ pipeline {
         // Docker configuration
         DOCKER_IMAGE_NAME = 'abhibindel/test'
         DOCKER_IMAGE_TAG = 'latest'
-        DOCKERFILE_PATH = '/root/devops-assignment/dockerfile'
+        DOCKERFILE_PATH = '/root/devops-assignment/Dockerfile'
         SSH_CREDENTIALS_ID = 'docker_ssh'
         DOCKER_SERVER_IP = '3.111.38.104'
         SSH_PORT = 22
@@ -48,4 +48,3 @@ pipeline {
         }
     }
 }
-
