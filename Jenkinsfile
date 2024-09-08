@@ -16,22 +16,45 @@ pipeline {
     }
 
     stages {
-        stage('Setup SSH Connection and Execute Commands') {
+        stage('Build Docker Image') {
             steps {
                 script {
                     sshagent([SSH_CREDENTIALS_ID]) {
-                        // Execute all commands in a single SSH session
+                        // SSH into Docker server and build Docker image
                         sh """
-                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} << 'EOF'
-                            # Build Docker image
+                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} '
                             docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} -f ${DOCKERFILE_PATH} .
-                            
-                            # Push Docker image to Docker Hub
+                        '
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    sshagent([SSH_CREDENTIALS_ID]) {
+                        // SSH into Docker server and push Docker image to Docker Hub
+                        sh """
+                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} '
                             docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
-                            
-                            # Restart Kubernetes deployment
+                        '
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Restart Kubernetes Deployment') {
+            steps {
+                script {
+                    sshagent([SSH_CREDENTIALS_ID]) {
+                        // SSH into Docker server and restart the Kubernetes deployment
+                        sh """
+                        ssh -p ${SSH_PORT} root@${DOCKER_SERVER_IP} '
                             kubectl --kubeconfig=${KUBE_CONFIG_PATH} rollout restart deployment/${DEPLOYMENT_NAME}
-                        EOF
+                        '
                         """
                     }
                 }
@@ -46,4 +69,5 @@ pipeline {
         }
     }
 }
+
 
